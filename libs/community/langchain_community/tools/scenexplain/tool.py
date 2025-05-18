@@ -21,8 +21,9 @@ class SceneXplainTool(BaseTool):
     name: str = "image_explainer"
     description: str = (
         "An Image Captioning Tool: Use this tool to generate a detailed caption "
-        "for an image. The input can be an image file of any format, and "
-        "the output will be a text description that covers every detail of the image."
+        "for an image. The input can be an image file of any format such as a URL or "
+        "a local file path, no other text, and the output will be a text description "
+        "that covers every detail of the image."
     )
     api_wrapper: SceneXplainAPIWrapper = Field(default_factory=SceneXplainAPIWrapper)
 
