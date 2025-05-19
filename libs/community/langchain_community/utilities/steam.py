@@ -2,12 +2,11 @@
 
 from typing import Any, List
 
-from pydantic import BaseModel, ConfigDict, model_validator
-
 from langchain_community.tools.steam.prompt import (
     STEAM_GET_GAMES_DETAILS,
     STEAM_GET_RECOMMENDED_GAMES,
 )
+from pydantic import BaseModel, ConfigDict, model_validator
 
 
 class SteamWebAPIWrapper(BaseModel):
@@ -45,7 +44,7 @@ class SteamWebAPIWrapper(BaseModel):
 
         # check if the python package is installed
         try:
-            from steam import Steam
+            from steam_web_api import Steam
         except ImportError:
             raise ImportError("python-steam-api library is not installed. ")
 
@@ -89,15 +88,17 @@ class SteamWebAPIWrapper(BaseModel):
         games = self.steam.apps.search_games(name)
         info_partOne_dict = self.get_id_link_price(games)
         info_partOne = self.parse_to_str(info_partOne_dict)
-        id = str(info_partOne_dict.get("id"))
-        info_dict = self.steam.apps.get_app_details(id)
-        data = info_dict.get(id).get("data")
+        game_id = info_partOne_dict.get("id")[0]
+        game_id_str = str(game_id)
+        info_dict = self.steam.apps.get_app_details(game_id)
+        data = info_dict.get(game_id_str).get("data")
         detailed_description = data.get("detailed_description")
-
         # detailed_description contains <li> <br> some other html tags, so we need to
         # remove them
         detailed_description = self.remove_html_tags(detailed_description)
-        supported_languages = info_dict.get(id).get("data").get("supported_languages")
+        supported_languages = (
+            info_dict.get(game_id_str).get("data").get("supported_languages")
+        )
         info_partTwo = (
             "The summary of the game is: "
             + detailed_description
@@ -156,9 +157,25 @@ class SteamWebAPIWrapper(BaseModel):
         return str(top_5_popular_not_owned)
 
     def run(self, mode: str, game: str) -> str:
+        """Run Steam API operations.
+
+        Args:
+            mode (str): Operation mode, can be either 'get_games_details' or 'get_recommended_games'
+            game (str): Game name or Steam ID, depending on the operation mode
+
+        Returns:
+            str: Result information of the operation
+
+        Raises:
+            ValueError: When an invalid operation mode is provided
+        """
         if mode == "get_games_details":
             return self.details_of_games(game)
         elif mode == "get_recommended_games":
-            return self.recommended_games(game)
+            try:
+                from decouple import config
+            except ImportError:
+                raise ImportError("decouple library is not installed. ")
+            return self.recommended_games(config("STEAM_ID"))
         else:
             raise ValueError(f"Invalid mode {mode} for Steam API.")
